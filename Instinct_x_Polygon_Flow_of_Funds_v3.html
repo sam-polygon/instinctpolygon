@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+<title>Instinct × Polygon — Flow of Funds</title>
+<style>
+  :root{
+    --ink:#eaf0ff; --dim:#9fb0d6; --line:rgba(150,175,230,.18);
+    --glass:rgba(14,22,44,.72); --glass2:rgba(18,28,55,.9);
+    --green:#34e07a; --blue:#3aa0ff; --violet:#a06bff; --amber:#ffb03a; --red:#ff6a6a; --gold:#ffd76a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:#070b18;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+  #app{position:fixed;inset:0}
+  canvas#three{position:fixed;inset:0;z-index:0;display:block;touch-action:none}
+  .hud{position:fixed;z-index:3}
+  #labels{position:fixed;inset:0;z-index:2;pointer-events:none;overflow:hidden}
+  .lab{position:absolute;transform:translate(-50%,-100%);white-space:nowrap;
+    font-size:11.5px;font-weight:700;letter-spacing:.3px;color:#dfe7ff;
+    background:rgba(10,16,34,.66);border:1px solid var(--line);border-radius:999px;padding:4px 10px;
+    backdrop-filter:blur(4px);transition:opacity .3s, transform .3s;display:flex;align-items:center;gap:7px}
+  .lab .d{width:8px;height:8px;border-radius:50%}
+  .lab.active{color:#fff;background:rgba(20,30,60,.92);transform:translate(-50%,-100%) scale(1.08);box-shadow:0 6px 22px rgba(0,0,0,.5)}
+
+  .brand{top:20px;left:24px;max-width:44vw}
+  .brand h1{margin:0;font-size:16px;font-weight:750;letter-spacing:-.2px}
+  .brand p{margin:4px 0 0;font-size:12px;color:var(--dim)}
+
+  .clock{top:20px;right:24px;display:flex;gap:10px;align-items:stretch}
+  .stat{background:rgba(13,20,44,.72);border:1px solid var(--line);border-radius:12px;padding:8px 20px;backdrop-filter:blur(10px);text-align:center;min-width:134px}
+  .stat b{display:block;font-size:9.5px;letter-spacing:1.3px;color:var(--dim);font-weight:800;text-transform:uppercase;margin-bottom:3px}
+  .stat span{font-size:16px;font-weight:750;font-variant-numeric:tabular-nums;color:#eaf0ff}
+  .stat .sub{font-size:10.5px;color:var(--dim);font-weight:600;margin-top:1px}
+
+  .map{right:20px;bottom:20px;background:var(--glass);border:1px solid var(--line);border-radius:14px;
+    padding:9px 9px 5px;backdrop-filter:blur(8px)}
+  /* end-of-journey summary */
+  .summary{position:fixed;inset:0;z-index:7;display:flex;align-items:center;justify-content:center;padding:32px 20px 104px;
+    background:rgba(6,10,22,.74);backdrop-filter:blur(7px);opacity:0;pointer-events:none;transition:opacity .55s}
+  .summary.show{opacity:1}
+  .summary.show .sum-card{pointer-events:auto}
+  .sum-card{width:min(900px,95vw);max-height:82vh;overflow:auto;pointer-events:none;
+    background:linear-gradient(180deg,rgba(15,22,46,.98),rgba(9,14,30,.99));border:1px solid rgba(150,175,230,.32);
+    border-radius:20px;padding:24px 30px 26px;box-shadow:0 34px 90px rgba(0,0,0,.62)}
+  .sum-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:4px}
+  .sum-kick{font-size:11.5px;font-weight:800;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;margin-bottom:6px}
+  .sum-card h2{margin:0;font-size:26px;font-weight:800;letter-spacing:-.4px;line-height:1.1}
+  #sumReplay,#sumClose,#sumDownload{background:var(--gold);color:#0b1020;border:none;font-weight:800;height:38px}
+  #sumReplay:hover,#sumClose:hover,#sumDownload:hover{filter:brightness(1.06)}
+  #sumReplay{width:auto;padding:0 16px;gap:6px;white-space:nowrap}
+  .sum-actions{display:flex;gap:8px;align-items:flex-start;flex:none}
+  #sumClose,#sumDownload{width:40px;font-size:15px}
+  .sum-stats{margin:16px 0 20px}
+  .sum-flow{display:flex;align-items:center;justify-content:center;gap:22px;margin-bottom:11px;
+    background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02));border:1px solid rgba(150,175,230,.18);border-radius:16px;padding:18px 26px}
+  .fl{flex:1;min-width:0;text-align:center}
+  .fl b{display:block;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);font-weight:800;margin-bottom:8px}
+  .fl span{font-size:26px;font-weight:800;letter-spacing:-.5px;color:#fff;font-variant-numeric:tabular-nums;line-height:1.15}
+  .fl span.recv{color:var(--green)}
+  .fl-arrow{flex:none;font-size:22px;color:var(--dim);opacity:.6}
+  .sum-mini{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+  .st{background:rgba(255,255,255,.045);border:1px solid rgba(150,175,230,.16);border-radius:12px;padding:13px 16px;text-align:center}
+  .st b{display:block;font-size:10px;letter-spacing:1.3px;text-transform:uppercase;color:var(--dim);font-weight:800;margin-bottom:7px}
+  .st span{font-size:17px;font-weight:750;color:#fff;font-variant-numeric:tabular-nums}
+  .st.cost span{color:var(--gold)}
+  .sum-list{display:flex;flex-direction:column}
+  .srow{display:grid;grid-template-columns:32px minmax(0,1fr) 118px 190px;gap:6px 16px;align-items:start;padding:13px 4px;border-bottom:1px solid rgba(150,175,230,.12)}
+  .srow:last-child{border-bottom:none}
+  .srow[data-wi]{cursor:pointer;border-radius:8px;transition:background .15s}
+  .srow[data-wi]:hover{background:rgba(255,255,255,.05)}
+  .shead{padding:0 4px 9px;border-bottom:1px solid rgba(150,175,230,.22)}
+  .shead .lab{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);font-weight:800}
+  .snum{flex:none;width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#08111f;font-size:15px}
+  .smain{min-width:0}
+  .sh b{font-weight:750;font-size:16px}
+  .sparty{color:var(--dim);font-weight:650;font-size:13px;margin-left:9px}
+  .sexp{font-size:13.5px;color:#c6d0ea;margin-top:3px;line-height:1.4}
+  .sdesc{font-size:12px;color:#93a0c0;margin-top:4px;line-height:1.42}
+  .scol{min-width:0}
+  .stime{font-size:13.5px;font-weight:700;color:#e6ecff}
+  .samt{font-size:13.5px;font-weight:700;color:#e6ecff;font-variant-numeric:tabular-nums}
+  .sevent{display:inline-block;margin-top:6px;font-size:11px;font-weight:700;color:#ffe4a0;background:rgba(255,215,106,.12);border:1px solid rgba(255,215,106,.28);border-radius:8px;padding:3px 8px;white-space:normal;line-height:1.35}
+  /* welcome / how-to modal */
+  .intro{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:28px;
+    background:rgba(6,10,22,.82);backdrop-filter:blur(10px);transition:opacity .55s}
+  .intro.hidden{opacity:0;pointer-events:none}
+  .intro-card{width:min(580px,94vw);max-height:90vh;overflow:auto;background:linear-gradient(180deg,rgba(16,24,50,.98),rgba(9,14,30,.99));
+    border:1px solid rgba(150,175,230,.3);border-radius:22px;padding:34px 38px;box-shadow:0 40px 100px rgba(0,0,0,.7)}
+  .intro-card .eyebrow{font-size:12px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;color:var(--gold);margin-bottom:11px}
+  .intro-card h1{margin:0;font-size:31px;font-weight:800;letter-spacing:-.6px;line-height:1.08}
+  .intro-card .lede{margin:13px 0 0;font-size:16.5px;line-height:1.55;color:#dbe4ff}
+  .intro-how{list-style:none;margin:22px 0 0;padding:0;display:flex;flex-direction:column;gap:13px}
+  .intro-how li{display:flex;gap:13px;align-items:flex-start;font-size:14.5px;line-height:1.45;color:#c6d0ea}
+  .intro-how .ic{flex:none;width:32px;height:32px;border-radius:9px;background:rgba(123,160,255,.14);border:1px solid rgba(150,175,230,.25);
+    display:flex;align-items:center;justify-content:center;font-size:15px;color:#cfe0ff}
+  .intro-how b{color:#fff;font-weight:700}
+  .start{margin-top:28px;width:100%;height:54px;border:none;border-radius:14px;cursor:pointer;
+    background:linear-gradient(180deg,#ffe08a,#ffcd54);color:#141207;font-size:16.5px;font-weight:800;letter-spacing:.3px;
+    display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 16px 38px rgba(255,215,106,.34);transition:.15s}
+  .start:hover{filter:brightness(1.06)}
+  .intro-note{margin:12px 2px 0;text-align:center;font-size:11.5px;color:var(--dim)}
+  .map canvas{display:block;border-radius:8px}
+  .map .cap{font-size:9px;letter-spacing:1.6px;color:var(--dim);font-weight:800;text-align:center;margin-top:4px}
+
+  .bannerwrap{position:fixed;top:calc(env(safe-area-inset-top,0px) + 48px);left:calc(env(safe-area-inset-left,0px) + 18px);right:calc(env(safe-area-inset-right,0px) + 18px);z-index:6;display:flex;flex-direction:column;align-items:center;pointer-events:none}
+  .banner{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;pointer-events:auto;
+    width:min(820px,100%);
+    background:linear-gradient(180deg,rgba(13,20,44,.97),rgba(9,14,30,.95));border:1px solid rgba(150,175,230,.3);
+    border-top:4px solid var(--accent,#3aa0ff);border-radius:20px;padding:20px 36px 22px;backdrop-filter:blur(16px);
+    box-shadow:0 24px 64px rgba(0,0,0,.58);transition:border-color .45s}
+  .nextbar{margin-top:9px;display:inline-flex;align-items:center;gap:10px;max-width:100%;
+    background:rgba(12,19,40,.5);border:1px solid rgba(150,175,230,.13);border-radius:12px;padding:8px 16px;
+    backdrop-filter:blur(8px);opacity:0;transform:translateY(-5px);transition:opacity .4s,transform .4s}
+  .nextbar.show{opacity:.6;transform:none}
+  .nb-tag{font-size:9.5px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:#6a789c}
+  .nb-step{font-size:11px;font-weight:800;letter-spacing:.7px;color:#9aa8cc}
+  .nb-sep{color:#4a5578}
+  .nb-title{font-size:13px;font-weight:600;color:#aab5d6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bn-left{min-width:0;max-width:720px}
+  .bn-kicker{font-size:12px;font-weight:800;letter-spacing:1.6px;color:var(--dim);text-transform:uppercase;margin-bottom:8px}
+  .bn-title{font-size:30px;font-weight:800;letter-spacing:-.5px;line-height:1.05}
+  .bn-exp{font-size:17.5px;color:#dbe4ff;margin:9px auto 0;line-height:1.45;max-width:660px}
+  .bn-cells{display:flex;gap:14px;align-items:stretch;justify-content:center;flex-wrap:wrap;width:100%}
+  .cell{background:rgba(255,255,255,.055);border:1px solid var(--line);border-radius:14px;padding:12px 24px;min-width:200px;text-align:center}
+  .cell b{display:block;font-size:11px;letter-spacing:1.4px;color:var(--dim);font-weight:800;text-transform:uppercase;margin-bottom:8px}
+  .cell .val{font-size:18px;font-weight:750;display:flex;align-items:center;justify-content:center;gap:10px;color:#fff}
+  .pdot{width:13px;height:13px;border-radius:50%;flex:none;box-shadow:0 0 10px currentColor}
+  .bn-legend{display:none;flex-wrap:wrap;justify-content:center;gap:8px 14px;max-width:760px}
+  .bn-legend.show{display:flex}
+  .lg{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:650;color:#dbe4ff;white-space:nowrap}
+  .lg-d{width:12px;height:12px;border-radius:4px;box-shadow:0 0 7px currentColor;flex:none}
+  @keyframes bnIn{from{opacity:.25;transform:translateY(-6px)}to{opacity:1;transform:none}}
+  .banner.chg .bn-left,.banner.chg .bn-cells,.banner.chg .bn-legend{animation:bnIn .45s ease}
+  .stats{display:flex;gap:10px;margin-top:10px}
+
+  .timeline{left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));z-index:3;width:min(600px,92vw)}
+  .tlbar{position:relative;height:3px;background:rgba(150,175,230,.2);border-radius:9px}
+  .tlfill{position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,var(--blue),var(--gold));border-radius:9px;width:0}
+  .tick{position:absolute;top:-5px;width:13px;height:13px;border-radius:50%;background:#0b1430;border:2px solid #43507a;transform:translateX(-50%);transition:.3s;cursor:pointer}
+  .tick.done{border-color:var(--gold)} .tick.cur{border-color:#fff;background:var(--gold);box-shadow:0 0 10px var(--gold)}
+  .tllabels{display:flex;justify-content:space-between;margin-top:11px;padding:0 2px;font-size:10px;color:var(--dim);font-weight:700;letter-spacing:.5px}
+  .legendbox{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 23vh);z-index:5;display:none;gap:22px;align-items:flex-start;
+    max-width:min(920px,94vw);background:var(--glass2);border:1px solid var(--line);border-radius:16px;padding:14px 22px;backdrop-filter:blur(12px);box-shadow:0 18px 50px rgba(0,0,0,.5)}
+  .legendbox.show{display:flex}
+  .lb-h{font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);font-weight:800;margin-bottom:9px;text-align:center}
+  .lb-grid{display:grid;grid-template-columns:repeat(3,auto);gap:8px 18px}
+  .lb-routes{grid-template-columns:1fr;gap:7px}
+  .lb-item{display:flex;align-items:center;gap:8px;font-size:12px;color:#dbe4ff;font-weight:600;white-space:nowrap}
+  .lb-chip{width:23px;height:23px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 0 8px rgba(0,0,0,.35)}
+  .lb-chip img{width:15px;height:15px;display:block}
+  .lb-chip.rt{font-weight:800;font-size:12.5px;color:#fff}
+  .lb-div{width:1px;align-self:stretch;background:var(--line);flex:none}
+  @media(max-width:860px){.legendbox{display:none!important}}
+  .routelabel{position:fixed;z-index:4;pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;
+    font-size:10.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#fff;
+    background:rgba(10,16,34,.82);border:1px solid var(--rc,#8892a6);border-radius:999px;padding:4px 12px;
+    backdrop-filter:blur(4px);opacity:0;transition:opacity .3s;box-shadow:0 0 14px -2px var(--rc,transparent)}
+  .routelabel.show{opacity:1}
+
+  .controls{left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:9;display:flex;gap:8px;align-items:center;
+    background:var(--glass2);border:1px solid var(--line);border-radius:15px;padding:8px 10px;backdrop-filter:blur(10px);box-shadow:0 14px 40px rgba(0,0,0,.5)}
+  button.ctl{background:rgba(30,42,80,.7);border:1px solid var(--line);border-radius:10px;width:40px;height:37px;color:var(--ink);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+  button.ctl:hover{background:rgba(50,66,120,.8)}
+  button.ctl.play{width:52px;background:linear-gradient(180deg,#3a5bd0,#2b43a0);border-color:#4a63c0}
+  .speed{min-width:44px;font-weight:700;font-size:12px}
+  #btnRestart{width:auto;padding:0 14px;gap:6px;font-size:12px;font-weight:800;letter-spacing:.6px}
+  .speedwrap{position:relative;display:flex}
+  .speedmenu{position:absolute;bottom:calc(100% + 10px);right:0;min-width:92px;display:none;flex-direction:column;gap:3px;
+    background:var(--glass2);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 16px 42px rgba(0,0,0,.55);backdrop-filter:blur(10px)}
+  .speedmenu.open{display:flex}
+  .speedmenu button{background:transparent;border:none;color:var(--ink);font-family:inherit;font-size:13px;font-weight:700;padding:9px 12px;border-radius:8px;cursor:pointer;text-align:center;transition:.12s}
+  .speedmenu button:hover{background:rgba(150,175,230,.14)}
+  .speedmenu button.active{background:rgba(120,150,220,.30);color:#fff}
+  .hint{left:24px;bottom:22px;z-index:3;font-size:11px;color:var(--dim);line-height:1.8}
+  .hint kbd{background:rgba(20,30,60,.8);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:10.5px}
+  #err{position:fixed;inset:0;z-index:9;display:none;align-items:center;justify-content:center;text-align:center;padding:40px;background:#070b18}
+  #err div{max-width:420px;color:var(--dim);font-size:15px;line-height:1.6}
+  /* tablet / short-landscape */
+  @media(max-width:860px){
+    .map{display:none}
+    .stats{gap:8px}.stat{min-width:0;flex:1;padding:7px 12px}.stat span{font-size:14px}
+    .banner{align-items:center;gap:12px;padding:18px 24px;width:100%}
+    .bn-cells{width:100%}
+    .cell{flex:1}
+    .bn-title{font-size:23px}
+    .bn-exp{font-size:14.5px;max-width:none}
+  }
+  /* phones */
+  @media(max-width:560px){
+    .bannerwrap{top:calc(env(safe-area-inset-top,0px) + 8px);left:calc(env(safe-area-inset-left,0px) + 8px);right:calc(env(safe-area-inset-right,0px) + 8px)}
+    .banner{gap:5px;padding:9px 13px;border-top-width:3px;border-radius:12px}
+    .bn-kicker{font-size:8px;letter-spacing:.9px;margin-bottom:2px}
+    .bn-title{font-size:15px;letter-spacing:-.2px;line-height:1.14}
+    .bn-exp{font-size:11px;margin-top:3px;line-height:1.28;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .bn-cells{gap:6px;margin-top:1px}
+    .cell{min-width:0;padding:5px 9px;border-radius:8px}
+    .cell b{font-size:7.5px;letter-spacing:.6px;margin-bottom:2px}
+    .cell .val{font-size:11px;gap:5px}
+    .pdot{width:9px;height:9px}
+    .nextbar{display:none}
+    .stats{gap:6px;margin-top:6px}
+    .stat{padding:5px 9px;min-width:0}
+    .stat b{font-size:7.5px;letter-spacing:.6px;margin-bottom:1px}
+    .stat span{font-size:11.5px}
+    .stat .sub{font-size:8px;margin-top:0;line-height:1.15}
+    .timeline{width:calc(100vw - 24px);bottom:calc(env(safe-area-inset-bottom,0px) + 70px)}
+    .controls{bottom:calc(env(safe-area-inset-bottom,0px) + 14px);gap:6px;padding:7px 8px;border-radius:13px}
+    button.ctl{width:42px;height:40px;font-size:14px;border-radius:9px}
+    button.ctl.play{width:52px}
+    .intro{padding:16px}
+    .intro-card{padding:24px 22px;border-radius:18px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+    .intro-card .eyebrow{font-size:11px;margin-bottom:9px}
+    .intro-card h1{font-size:23px}
+    .intro-card .lede{font-size:14px;margin-top:10px;line-height:1.5}
+    .intro-how{gap:11px;margin-top:16px}
+    .intro-how li{font-size:13px}
+    .intro-how .ic{width:28px;height:28px;font-size:13px}
+    .start{height:50px;font-size:15px;margin-top:20px}
+    .summary{padding:14px 12px calc(env(safe-area-inset-bottom,0px) + 84px)}
+    .sum-card{padding:18px 16px;border-radius:16px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+    .sum-card h2{font-size:20px}
+    #sumReplay{padding:0 13px;font-size:12px;height:34px}
+    .srow{grid-template-columns:28px 1fr;gap:4px 10px;padding:12px 2px}
+    .shead{display:none}
+    .smain,.scol{grid-column:2}
+    .stime{margin-top:2px}
+    .stime::before{content:'Timeframe — ';color:var(--dim);font-weight:700}
+    .secon{margin-top:2px}
+    .sh b{font-size:15px} .sparty{margin-left:7px}
+    .sexp{font-size:12.5px}
+    .sum-flow{gap:12px;padding:14px 14px;margin-bottom:9px}
+    .fl span{font-size:18px}
+    .fl b{font-size:9px;margin-bottom:5px;letter-spacing:1px}
+    .fl-arrow{font-size:16px}
+    .sum-mini{gap:8px}
+    .st{padding:10px 8px}
+    .st b{font-size:8.5px;letter-spacing:.7px}
+    .st span{font-size:13px}
+  }
+  /* short viewports (landscape phones): keep the banner compact so the scene stays visible */
+  @media(max-height:460px){
+    .bannerwrap{top:calc(env(safe-area-inset-top,0px) + 6px)}
+    .banner{padding:10px 16px;gap:8px}
+    .bn-title{font-size:18px}.bn-exp{font-size:12.5px;margin-top:3px}
+    .bn-kicker{margin-bottom:3px}
+    .nextbar{display:none}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="labels"></div>
+  <div class="routelabel" id="routeLabel"></div>
+
+  <!-- broad top banner — explains every step -->
+  <div class="bannerwrap">
+    <div class="banner" id="banner">
+      <div class="bn-left">
+        <div class="bn-kicker"><span id="bnStep">STEP 1 / 9</span> &nbsp;·&nbsp; <span id="bnPhase">Funds Flow</span></div>
+        <div class="bn-title" id="bnTitle">Payment initiated</div>
+        <div class="bn-exp" id="bnExp">A user authorizes Instinct to hold and spend $2,000 on Polygon.</div>
+      </div>
+      <div class="bn-cells" id="bnCells">
+        <div class="cell"><b>Party</b><div class="val"><span class="pdot" id="bnDot"></span><span id="bnParty">Originator</span></div></div>
+        <div class="cell" id="bnTimeCell"><b>Expected timeframe</b><div class="val" id="bnTime">Instant</div></div>
+      </div>
+      <div class="bn-legend" id="bnLegend"></div>
+    </div>
+    <div class="nextbar" id="nextbar">
+      <span class="nb-tag">Up next</span><span class="nb-step" id="nbStep">Step 2</span><span class="nb-sep">·</span><span class="nb-title" id="nbTitle"></span>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>Elapsed</b><span id="stElapsed">T+0</span><div class="sub" id="stElapsedSub">initiated</div></div>
+      <div class="stat"><b>Amount</b><span id="stAmount">$2,000</span><div class="sub" id="stAmountSub">sent</div></div>
+    </div>
+  </div>
+
+
+  <div class="hud map"><canvas id="mini" width="188" height="150"></canvas><div class="cap">ROUTE MAP</div></div>
+
+  <div class="hud timeline">
+    <div class="tlbar"><div class="tlfill" id="tlfill"></div><div id="ticks"></div></div>
+    <div class="tllabels" id="tllabels"><span></span><span></span><span></span></div>
+  </div>
+
+  <!-- overview legend: parties + route types (colours + icons) -->
+  <div class="legendbox" id="legendBox">
+    <div class="lb-col"><div class="lb-h">Swim lanes</div><div class="lb-grid" id="lbParties"></div></div>
+    <div class="lb-div"></div>
+    <div class="lb-col"><div class="lb-h">Route types</div><div class="lb-grid lb-routes" id="lbRoutes"></div></div>
+  </div>
+
+  <!-- end-of-journey full step recap -->
+  <div class="summary" id="summary">
+    <div class="sum-card">
+      <div class="sum-head">
+        <div><div class="sum-kick">Complete Funds Flow</div><h2 id="sumTitle">Flow of funds</h2></div>
+        <div class="sum-actions">
+          <button class="ctl" id="sumDownload" title="Download a PDF of this funds flow">⬇</button>
+          <button class="ctl" id="sumReplay" title="Replay the journey"><span style="font-size:1.35em;line-height:1">⟲</span>&nbsp;Replay</button>
+          <button class="ctl" id="sumClose" title="Back to the overview (paused)">✕</button>
+        </div>
+      </div>
+      <div class="sum-stats" id="sumStats"></div>
+      <div class="sum-list" id="sumList"></div>
+    </div>
+  </div>
+
+  <div class="hud controls">
+    <button class="ctl" id="btnRestart" title="Reset to the overview">RESET</button>
+    <button class="ctl" id="btnPrev" title="Previous stop">◀</button>
+    <button class="ctl play" id="btnPlay" title="Play / Pause">⏸</button>
+    <button class="ctl" id="btnNext" title="Next stop">▶</button>
+    <div class="speedwrap">
+      <div class="speedmenu" id="speedMenu">
+        <button data-s="0.5">0.5×</button>
+        <button data-s="1">1×</button>
+        <button data-s="1.5">1.5×</button>
+        <button data-s="2">2×</button>
+        <button data-s="3">3×</button>
+      </div>
+      <button class="ctl speed" id="btnSpeed" title="Playback speed">1×</button>
+    </div>
+  </div>
+
+  <!-- welcome / how-to gate -->
+  <div class="intro" id="intro">
+    <div class="intro-card">
+      <div class="eyebrow">Flow of funds · Interactive</div>
+      <h1 id="introTitle">Flow of Funds</h1>
+      <p class="lede">Follow $2,000 from a user’s bank account into an Instinct agent wallet on Polygon — spent on instruction, paid to a merchant in USDC, split between agents, and reconciled back. The glowing packet is the value; the camera rides just behind it.</p>
+      <ul class="intro-how">
+        <li><span class="ic">▶</span><div>Press <b>Start</b> and the journey plays on its own, stop by stop.</div></li>
+        <li><span class="ic">≡</span><div>The <b>banner up top</b> explains each step — what happens, who's involved, and how long it takes.</div></li>
+        <li><span class="ic">⏸</span><div>Use the <b>controls at the bottom</b> to pause, step back or forward, restart, or change speed.</div></li>
+        <li><span class="ic">✓</span><div>At the end you'll see a <b>full recap</b> of every step.</div></li>
+      </ul>
+      <button class="start" id="startBtn">Start the journey&nbsp;&nbsp;▶</button>
+      <p class="intro-note">Takes about a minute · you can pause or replay anytime</p>
+    </div>
+  </div>
+
+  <div id="err"><div><b>3D view needs WebGL.</b><br/>Open this file in a desktop browser (Chrome, Safari, Edge, Firefox) with hardware acceleration enabled.</div></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+"use strict";
+(function(){
+if(!window.THREE){document.getElementById('err').style.display='flex';return;}
+
+/* ---------------- data ---------------- */
+/* ============================ FLOW DATA LAYER ============================
+   The flow-of-funds-animator skill replaces ONLY the [DATA]-tagged constants (most are
+   right here; SUMMARY is a second [DATA] block near the END of the script). Anything
+   between them is machinery.
+   Leave the machinery as-is: routeColor(), routeLabel(), fmtTF(), na(), the
+   CURCOLOR/CURSYM/CHAINCOLOR palette maps, the ICONS map, N, and the auto layout.
+   Full field spec + rules: references/DATA-SCHEMA.md
+   ======================================================================== */
+// [DATA] CAT = swim lanes: actor category -> {c:colorHex, label}. Declaration order = top->bottom lanes.
+const CAT={
+  user:{c:0x34e07a,label:'Instinct User'},
+  agent:{c:0xf5a623,label:'Instinct Agent'},
+  polygon:{c:0x8247e5,label:'Polygon OMS'},
+  counterparty:{c:0x3aa0ff,label:'Merchant / Other Instinct'}
+};
+// [DATA] WP = one object per step (name, role, cat, amount, amsub, desc, event). Order = flow order.
+const WP=[
+  {name:'Mandate Set',role:'Mandate to the agent',cat:'user',phase:'Phase 1 · Setup',stamp:'Setup · mandate',elapsed:'One-time',elsub:'per user',amount:'$2,000 mandate',amsub:'spend on instruction',
+   desc:'The user authorizes Instinct to hold up to $2,000 and spend only on instruction. Instinct records the mandate as wallet policy.',event:''},
+  {name:'Agent Wallet Provisioned',role:'OMS API · embedded wallet',cat:'polygon',phase:'Phase 1 · Wallet',stamp:'Setup · wallet',elapsed:'One-time',elsub:'wallet created',amount:'Wallet live',amsub:'spend rules enforced [VERIFY]',
+   desc:'Instinct calls the OMS API once. Polygon provisions an embedded wallet for the agent with the mandate encoded as policy: per-transaction cap, daily cap, merchant allowlist, approval threshold. Gas is sponsored; keys are never exposed to the agent.',event:'✓ Spend rules enforced'},
+  {name:'Wallet Funded',role:'ACH · FedNow · RTP · debit · any chain',cat:'user',phase:'Phase 1 · Funding',stamp:'Fund · $2,000',elapsed:'Instant–same day',elsub:'ACH / FedNow / RTP / debit',amount:'$2,000',amsub:'USD in',
+   desc:'The user funds the wallet from a bank account (ACH, FedNow, RTP) or debit card through Polygon’s regulated ramp (Coinme, 47 states [VERIFY]). A crypto-native user can instead send any token from any chain via Trails.',event:''},
+  {name:'USDC in Wallet',role:'USD → USDC',cat:'agent',phase:'Phase 1 · Settlement',stamp:'Fund · USDC',elapsed:'Seconds',elsub:'on-chain',amount:'2,000 USDC',amsub:'in agent wallet',
+   desc:'The ramp converts USD to USDC and settles into the agent wallet on Polygon. The balance is visible to the user in Instinct in real time.',event:''},
+  {name:'Purchase Instructed',role:'Text to Instinct',cat:'user',phase:'Phase 2 · Instruction',stamp:'Spend · instruct',elapsed:'Instant',elsub:'one message',amount:'$640',amsub:'instructed',
+   desc:'Days later the user texts: “book the Lisbon flight we discussed and split it with Alex.” Instinct finds a $640 fare from a travel merchant that accepts stablecoins.',event:''},
+  {name:'Spend Authorized',role:'Wallet policy check',cat:'agent',phase:'Phase 2 · Authorization',stamp:'Spend · auth',elapsed:'Seconds',elsub:'policy check',amount:'640 USDC',amsub:'policy check',
+   desc:'The wallet checks the 640 USDC payment against the spend policy before signing: under the per-transaction cap, merchant category allowed, no user approval needed.',event:'✓ Policy check passed'},
+  {name:'Merchant Paid',role:'USDC · Trails if needed',cat:'counterparty',phase:'Phase 2 · Settlement',stamp:'Spend · settle',elapsed:'Seconds',elsub:'final',amount:'640 USDC',amsub:'to merchant',
+   desc:'The agent pays the merchant in USDC. If the merchant accepts USDC on Polygon, it lands directly; if it needs another chain or asset, Trails converts and delivers in one step.',event:''},
+  {name:'Cost Split Settled',role:'Instinct → Instinct',cat:'counterparty',phase:'Phase 2 · Agent-to-agent',stamp:'Split · 320 USDC',elapsed:'Seconds',elsub:'agent to agent',amount:'320 USDC',amsub:'reimbursed',
+   desc:'Instinct asks the friend’s Instinct for half. The friend’s standing mandate already covers shared travel, so their agent reimburses 320 USDC wallet-to-wallet on Polygon in seconds for a fraction of a cent, with no approval needed.',event:'✓ Agent-to-agent settlement'},
+  {name:'Screened & Reconciled',role:'Compliance · ledger',cat:'polygon',phase:'Phase 2 · Reconciliation',stamp:'Close · reconcile',elapsed:'Real-time',elsub:'continuous',amount:'1,680 USDC',amsub:'remaining balance',
+   desc:'Every transfer is screened (sanctions, AML, Travel Rule) and written to Instinct’s ledger via the API. The user gets a receipt in chat; the remaining 1,680 USDC stays in the agent wallet for the next instruction.',event:'✓ Screened · ledgered'}
+];
+const N=WP.length;
+// [DATA] icon per step (keys from the ICONS map further below).
+['person','wallet','bank','wallet','person','agent','globe','agent','compliance'].forEach((ic,i)=>WP[i].icon=ic);
+// COLOR = SWIMLANE: each step is coloured by its lane (CAT[cat].c), so a party that recurs keeps ONE colour
+// across all its steps and the output mirrors the source's swimlanes exactly. #colours = #lanes, not #steps.
+// [DATA] LEGLBL = short party labels for boxes/legend, index-aligned to WP.
+const LEGLBL=['User','Polygon','User','Agent','User','Agent','Merchant','Friend’s Instinct','Polygon'];
+WP.forEach((w,i)=>{w.color=(CAT[w.cat]&&CAT[w.cat].c)||0x8892a6; w.legLabel=LEGLBL[i];});
+
+// route type of the segment INTO step i (i = 1..N-1). banking = fiat rails, blockchain = stablecoin rails, data = messaging.
+const CURCOLOR={USD:0x34e07a,EUR:0x4ea1ff,GBP:0xf5c518,JPY:0xff8a5c};
+const CURSYM={USD:'$',EUR:'€',GBP:'£',JPY:'¥'};
+const CHAINCOLOR={Polygon:0x8247e5,Ethereum:0x6f7cff,Base:0x2b6bff,Solana:0x14f195,Arbitrum:0x28a0f0};
+// [DATA] ROUTES[i] = the segment INTO step i (ROUTES[0]=null). {type:'banking',cur,net} | {type:'blockchain',chain} | {type:'data'}.
+const ROUTES=[null,
+  {type:'data'},                                            // Mandate → Wallet provisioned (OMS API call)
+  {type:'data'},                                            // Wallet provisioned → Wallet funded (wallet ready)
+  {type:'banking',cur:'USD',net:'ACH / FedNow / RTP / Debit'}, // Wallet funded → USDC in wallet (fiat ramp)
+  {type:'data'},                                            // USDC in wallet → Purchase instructed (message)
+  {type:'data'},                                            // Instructed → Spend authorized (policy check)
+  {type:'blockchain',chain:'Polygon'},                      // Authorized → Merchant paid (USDC / Trails)
+  {type:'blockchain',chain:'Polygon'},                      // Merchant paid → Cost split (agent-to-agent)
+  {type:'data'}                                             // Cost split → Screened & reconciled
+];
+function routeColor(r){ if(!r)return 0xffd76a; if(r.type==='banking')return CURCOLOR[r.cur]||0x34e07a; if(r.type==='blockchain')return CHAINCOLOR[r.chain]||0x8247e5; return 0x2a2f3c; }
+function routeLabel(r){ if(!r)return ''; if(r.type==='banking')return r.net||'Bank Transfer'; if(r.type==='blockchain')return r.chain||'Blockchain'; return 'Data'; }
+// clean left→right route: evenly spaced, one gentle curve, all on a single flat level (no zig-zag)
+(function(){ // SWIMLANE GRID: x = time (monotonic left→right, never backward), z = lane row.
+  // Each party owns a horizontal lane (its steps share a z-row); the packet flows forward and weaves between
+  // rows — mirroring how a swim-lane flow-of-funds diagram is drawn, so it stays easy to follow.
+  const HX=52, lanes=Object.keys(CAT), nL=lanes.length, ZSPAN=nL>1?Math.min(8*(nL-1),26):0;
+  const laneZ={}; lanes.forEach((k,i)=>{ laneZ[k]= nL>1 ? -ZSPAN/2 + ZSPAN*(i/(nL-1)) : 0; });
+  WP.forEach((w,i)=>{ const tx=N>1?i/(N-1):0.5; w.pos=[-HX+2*HX*tx, 0, (laneZ[w.cat]||0)]; });
+})(); // lane rows in CAT (source top→bottom) order
+// banner fields: distinct step title, involved party, concise explanation, expected timeframe
+// [DATA] STEP_TITLE = short step titles, index-aligned to WP.
+const STEP_TITLE=['Mandate set','Agent wallet provisioned','Wallet funded','USDC in wallet','Purchase instructed','Spend authorized','Merchant paid','Cost split settled','Screened & reconciled'];
+// [DATA] PARTY = full party names (banner), index-aligned to WP.
+const PARTY=['Instinct User','Polygon OMS (Wallets)','Instinct User','Instinct Agent (Wallet)','Instinct User','Instinct Agent (Wallet)','Travel merchant','Friend’s Instinct','Polygon OMS'];
+// [DATA] EXP = one-line plain-English explanation per step, index-aligned to WP.
+const EXP=['The user authorizes Instinct to hold up to $2,000 and spend only on instruction.','One OMS API call provisions an embedded agent wallet with the mandate encoded as spend policy [VERIFY].','The user funds the wallet via ACH, FedNow, RTP or debit through Polygon’s regulated ramp (47 states [VERIFY]), or from any chain via Trails.','USD converts to USDC and settles into the agent wallet on Polygon in seconds.','The user texts Instinct to book a $640 flight to split with a friend.','The wallet checks the 640 USDC payment against the spend policy before signing.','The agent pays the merchant 640 USDC on Polygon, or via Trails if the merchant needs another chain or asset.','The friend’s Instinct, under a previously approved mandate, reimburses 320 USDC wallet-to-wallet in seconds for a fraction of a cent.','Transfers are screened, ledgered to Instinct via API and receipted in chat; 1,680 USDC remains in the wallet.'];
+// [DATA] TF = raw timeframe per step (fmtTF normalizes). '' if unknown; box drops if none set.
+const TF=['One-time','Instant','Instant (FedNow / RTP / debit) · Same day (ACH) [VERIFY]','Seconds','Instant','Seconds','Seconds','Seconds','Real-time'];
+const capW=s=>s.charAt(0).toUpperCase()+s.slice(1).toLowerCase();
+function fmtTF(t){
+  if(!t)return t;
+  if(/seconds?\s*[-–—]\s*minutes?/i.test(t)) return 'Instant';                 // seconds–minutes => Instant
+  const m=t.match(/^\s*([A-Za-z]+)\s*[-–—]\s*([A-Za-z]+)\s*$/);                 // any word–word range
+  return m ? capW(m[1])+' - '+capW(m[2]) : t;                                    // => "Minutes - Hours"
+}
+WP.forEach((w,i)=>{w.stepTitle=STEP_TITLE[i];w.party=PARTY[i];w.exp=EXP[i];w.tf=fmtTF(TF[i]);});
+// do any steps have a timeframe at all? drives whether the banner shows the timeframe cell
+const hasStepTF=WP.some(w=>w.tf&&String(w.tf).trim()!=='');
+
+/* ---------------- scene ---------------- */
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x070b18);
+scene.fog=new THREE.Fog(0x070b18,60,190);
+
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.1,600);
+let renderer;
+try{ renderer=new THREE.WebGLRenderer({antialias:true}); }
+catch(e){ document.getElementById('err').style.display='flex'; return; }
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.domElement.id='three';
+document.getElementById('app').appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0x3a4a72,0.55));
+const key=new THREE.DirectionalLight(0x9fb4ff,0.6); key.position.set(20,50,30); scene.add(key);
+
+/* ground + grid */
+const grid=new THREE.GridHelper(300,80,0x1b2748,0x121a30);
+grid.position.y=-0.05; scene.add(grid);
+const groundMat=new THREE.MeshBasicMaterial({color:0x080d1c,transparent:true,opacity:0.72});
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(400,400),groundMat);
+ground.rotation.x=-Math.PI/2; ground.position.y=-0.1; scene.add(ground);
+
+/* route curve */
+const pts=WP.map(w=>new THREE.Vector3(w.pos[0],w.pos[1]+1.2,w.pos[2]));
+const curve=new THREE.CatmullRomCurve3(pts,false,'catmullrom',0.5);
+const T=WP.map((_,i)=>i/(N-1));
+
+const tube=new THREE.Mesh(
+  new THREE.TubeGeometry(curve,600,0.28,10,false),
+  new THREE.MeshStandardMaterial({color:0x1d2b52,emissive:0x24406e,emissiveIntensity:0.6,metalness:0.3,roughness:0.5})
+);
+scene.add(tube);
+
+// click-to-jump picking: click any stop's zone or icon to go straight to that step
+const hitTargets=[]; const raycaster=new THREE.Raycaster(); const pointer=new THREE.Vector2();
+
+// color-coded ground zones (swim-lane style): each stop's area is tinted by its party type
+WP.forEach((w,i)=>{
+  const zone=new THREE.Mesh(new THREE.PlaneGeometry(13,7),
+    new THREE.MeshBasicMaterial({color:w.color,transparent:true,opacity:0.17,depthWrite:false}));
+  zone.rotation.x=-Math.PI/2; zone.position.set(w.pos[0],0.02,w.pos[2]);
+  zone.userData.wi=i; hitTargets.push(zone); scene.add(zone);
+});
+
+/* perpetual flow dots along the route (show direction) */
+const flowN=46, flow=[];
+const flowGeo=new THREE.SphereGeometry(0.14,8,8);
+const flowMat=new THREE.MeshBasicMaterial({color:0x6fd3ff,transparent:true,opacity:0.5});
+for(let i=0;i<flowN;i++) flow.push(i/flowN); // phase offsets along the route
+const flowMeshes=flow.map(()=>{const m=new THREE.Mesh(flowGeo,flowMat);scene.add(m);return m;});
+
+/* markers — glowing map hotspots: light pool, ground rings, beacon beam, icon chip + soft glow */
+function makeGlowTex(){
+  const s=128,c=document.createElement('canvas');c.width=c.height=s;const x=c.getContext('2d');
+  const g=x.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+  g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.22,'rgba(255,255,255,.5)');g.addColorStop(1,'rgba(255,255,255,0)');
+  x.fillStyle=g;x.fillRect(0,0,s,s);return new THREE.CanvasTexture(c);
+}
+const glowTex=makeGlowTex();
+
+/* representative node icons — drawn to a canvas chip, shown as a camera-facing sprite */
+const ICONS={
+agent:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="22" y="34" width="56" height="44" rx="10" fill="#fff"/><rect x="47" y="18" width="6" height="14" fill="#fff"/><circle cx="50" cy="16" r="5" fill="#fff"/><circle cx="38" cy="54" r="6" fill="#12203f"/><circle cx="62" cy="54" r="6" fill="#12203f"/><rect x="38" y="66" width="24" height="4" rx="2" fill="#12203f"/></svg>`,
+earn:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polyline points="18,74 38,54 54,64 82,30" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><polyline points="64,30 82,30 82,48" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+person:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="36" r="16" fill="#fff"/><path d="M24 80 q0 -24 26 -24 q26 0 26 24 z" fill="#fff"/></svg>`,
+bank:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 16 L82 34 L18 34 Z" fill="#fff"/><rect x="18" y="36" width="64" height="5" fill="#fff"/><rect x="24" y="44" width="7" height="28" fill="#fff"/><rect x="38" y="44" width="7" height="28" fill="#fff"/><rect x="55" y="44" width="7" height="28" fill="#fff"/><rect x="69" y="44" width="7" height="28" fill="#fff"/><rect x="16" y="75" width="68" height="7" rx="2" fill="#fff"/></svg>`,
+globe:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="30" fill="none" stroke="#fff" stroke-width="5"/><ellipse cx="50" cy="50" rx="13" ry="30" fill="none" stroke="#fff" stroke-width="4"/><line x1="20" y1="50" x2="80" y2="50" stroke="#fff" stroke-width="4"/><line x1="27" y1="34" x2="73" y2="34" stroke="#fff" stroke-width="3.5"/><line x1="27" y1="66" x2="73" y2="66" stroke="#fff" stroke-width="3.5"/></svg>`,
+fx:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M20 42 h38 v-8 l16 13 -16 13 v-8 h-38 z" fill="#fff"/><path d="M80 66 h-38 v-8 l-16 13 16 13 v-8 h38 z" fill="#fff"/><text x="17" y="30" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="bold" fill="#fff">$</text><text x="68" y="93" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="bold" fill="#fff">&#8364;</text></svg>`,
+compliance:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="24" y="26" width="38" height="50" rx="4" fill="#fff"/><rect x="31" y="37" width="24" height="3.5" fill="#12203f"/><rect x="31" y="46" width="24" height="3.5" fill="#12203f"/><rect x="31" y="55" width="14" height="3.5" fill="#12203f"/><path d="M28 20 q15 -13 30 0 z" fill="#fff"/><rect x="22" y="18" width="42" height="4" rx="2" fill="#fff"/><circle cx="63" cy="60" r="15" fill="none" stroke="#fff" stroke-width="5"/><path d="M55 60 l6 6 l11 -13" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="72" y="70" width="19" height="7" rx="3.5" transform="rotate(45 72 70)" fill="#fff"/></svg>`,
+  card:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="15" y="30" width="70" height="42" rx="6" fill="#fff"/><rect x="15" y="39" width="70" height="9" fill="#12203f"/><rect x="23" y="58" width="24" height="6" rx="2" fill="#12203f"/></svg>`,
+  wallet:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="20" y="32" width="60" height="40" rx="7" fill="#fff"/><rect x="52" y="44" width="32" height="16" rx="4" fill="#fff"/><circle cx="63" cy="52" r="4" fill="#12203f"/></svg>`
+};
+function drawChip(ctx,S,hex){
+  ctx.clearRect(0,0,S,S);
+  const c=S/2, r=S*0.44;
+  ctx.save(); ctx.shadowColor=hex; ctx.shadowBlur=S*0.1;
+  ctx.beginPath(); ctx.arc(c,c,r,0,Math.PI*2); ctx.fillStyle='#0c1430'; ctx.fill();
+  ctx.restore();
+  const g=ctx.createLinearGradient(0,c-r,0,c+r);
+  g.addColorStop(0,'rgba(255,255,255,0.07)'); g.addColorStop(1,'rgba(0,0,0,0.2)');
+  ctx.beginPath(); ctx.arc(c,c,r,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
+  ctx.beginPath(); ctx.arc(c,c,r-3,0,Math.PI*2); ctx.lineWidth=S*0.05; ctx.strokeStyle=hex; ctx.stroke();
+}
+function iconSprite(type,hex){
+  const S=256, cv=document.createElement('canvas'); cv.width=cv.height=S;
+  const ctx=cv.getContext('2d'); drawChip(ctx,S,hex);
+  const tex=new THREE.CanvasTexture(cv); tex.anisotropy=4;
+  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false});
+  const sp=new THREE.Sprite(mat);
+  const img=new Image();
+  img.onload=()=>{ const s=S*0.58,p=(S-s)/2; ctx.drawImage(img,p,p,s,s); tex.needsUpdate=true; };
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(ICONS[type]);
+  return sp;
+}
+const markers=[];
+WP.forEach((w,i)=>{
+  const col=w.color;
+  const g=new THREE.Group();
+  // faint stem grounding the node to the map
+  const stemH=w.pos[1]+4.4;
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,stemH,8),
+     new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.2}));
+  stem.position.y=4.4-stemH/2; g.add(stem);
+  // ground light pool
+  const poolMat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.1,blending:THREE.AdditiveBlending,depthWrite:false});
+  const pool=new THREE.Mesh(new THREE.CircleGeometry(3.4,48),poolMat);
+  pool.rotation.x=-Math.PI/2; pool.position.y=0.09; g.add(pool);
+  // concentric ground rings
+  const ring1Mat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.6});
+  const ring1=new THREE.Mesh(new THREE.TorusGeometry(2.0,0.045,10,64),ring1Mat);
+  ring1.rotation.x=-Math.PI/2; ring1.position.y=0.12; g.add(ring1);
+  const ring2Mat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.3});
+  const ring2=new THREE.Mesh(new THREE.TorusGeometry(2.75,0.03,10,64),ring2Mat);
+  ring2.rotation.x=-Math.PI/2; ring2.position.y=0.12; g.add(ring2);
+  // beacon light beam
+  const beamMat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.1,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
+  const beam=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.95,7,28,1,true),beamMat);
+  beam.position.y=3.5; g.add(beam);
+  // soft glow sprite behind the node
+  const glowMat=new THREE.SpriteMaterial({map:glowTex,color:col,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending,depthWrite:false});
+  const glow=new THREE.Sprite(glowMat); glow.scale.setScalar(4.4); glow.position.y=4.4; g.add(glow);
+  // representative node icon (camera-facing sprite on a glowing chip)
+  glow.renderOrder=1;
+  const hex='#'+col.toString(16).padStart(6,'0');
+  const icon=iconSprite(w.icon,hex);
+  icon.scale.setScalar(2.8); icon.position.y=4.4; icon.renderOrder=2; g.add(icon);
+  const hit=new THREE.Mesh(new THREE.CylinderGeometry(6,6,10,16),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
+  hit.position.y=4.6; hit.userData.wi=i; g.add(hit); hitTargets.push(hit);
+  g.position.set(w.pos[0],w.pos[1],w.pos[2]);
+  scene.add(g);
+  markers.push({g,col,icon,glow,glowMat,ring1Mat,ring2,ring2Mat,beamMat,poolMat,baseY:4.4,phase:i*1.7});
+});
+
+/* funds packet */
+const packet=new THREE.Group();
+const core=new THREE.Mesh(new THREE.SphereGeometry(0.85,24,24),
+   new THREE.MeshStandardMaterial({color:0xfff2c8,emissive:0xffd76a,emissiveIntensity:1.4,metalness:0.2,roughness:0.25}));
+packet.add(core);
+const glow=new THREE.Mesh(new THREE.SphereGeometry(1.7,20,20),
+   new THREE.MeshBasicMaterial({color:0xffd76a,transparent:true,opacity:0.22}));
+packet.add(glow);
+const ringP=new THREE.Mesh(new THREE.TorusGeometry(1.35,0.06,8,40),
+   new THREE.MeshBasicMaterial({color:0xffe9a8,transparent:true,opacity:0.7}));
+packet.add(ringP);
+const pLight=new THREE.PointLight(0xffdd7a,2.4,46,2); packet.add(pLight);
+// symbol overlay on the packet (currency / stablecoin), drawn per segment
+const psymCanvas=document.createElement('canvas'); psymCanvas.width=psymCanvas.height=128;
+const psymCtx=psymCanvas.getContext('2d'); const psymTex=new THREE.CanvasTexture(psymCanvas);
+const psym=new THREE.Sprite(new THREE.SpriteMaterial({map:psymTex,transparent:true,depthTest:false,depthWrite:false}));
+psym.scale.setScalar(1.7); packet.add(psym);
+scene.add(packet);
+
+/* trail */
+const TRAIL=54;
+const trailPos=new Float32Array(TRAIL*3);
+const trailGeo=new THREE.BufferGeometry();
+trailGeo.setAttribute('position',new THREE.BufferAttribute(trailPos,3));
+const trail=new THREE.Line(trailGeo,new THREE.LineBasicMaterial({color:0xffd76a,transparent:true,opacity:0.5}));
+scene.add(trail);
+let trailBuf=[];
+
+// set packet colour + travelling icon based on the current segment's route type
+function applyRoute(r){
+  const isData=!r||r.type==='data';
+  const col=routeColor(r);
+  const glowCol=isData?0x8892a6:col;
+  core.material.color.setHex(isData?0x24262e:col); core.material.emissive.setHex(isData?0x12141a:col);
+  glow.material.color.setHex(glowCol); ringP.material.color.setHex(glowCol);
+  pLight.color.setHex(isData?0x9aa2b4:col); trail.material.color.setHex(glowCol);
+  psymCtx.clearRect(0,0,128,128);
+  if(isData){ psym.visible=false; psymTex.needsUpdate=true; return; }   // data = plain sphere, no icon
+  psym.visible=true;
+  psymCtx.fillStyle='#fff'; psymCtx.strokeStyle='#fff'; psymCtx.lineWidth=9;
+  if(r.type==='blockchain'){                                            // stablecoin = hexagon token + currency mark
+    psymCtx.beginPath();
+    for(let i=0;i<6;i++){const a=Math.PI/6+i*Math.PI/3,x=64+40*Math.cos(a),y=64+40*Math.sin(a); i?psymCtx.lineTo(x,y):psymCtx.moveTo(x,y);}
+    psymCtx.closePath(); psymCtx.stroke();
+  }
+  psymCtx.font='bold 60px -apple-system,Arial,sans-serif'; psymCtx.textAlign='center'; psymCtx.textBaseline='middle';
+  psymCtx.fillText(r.type==='banking'?(CURSYM[r.cur]||'$'):'$', 64, 70);
+  psymTex.needsUpdate=true;
+}
+
+/* ---------------- HUD refs ---------------- */
+const $=id=>document.getElementById(id);
+const labWrap=$('labels'), labels=WP.map((w,i)=>{
+  const d=document.createElement('div'); d.className='lab';
+  const dot=document.createElement('span'); dot.className='d'; dot.style.background='#'+w.color.toString(16).padStart(6,'0');
+  const t=document.createElement('span'); t.textContent=w.name;
+  d.appendChild(dot); d.appendChild(t); labWrap.appendChild(d); return d;
+});
+// timeline ticks
+const ticks=WP.map((w,i)=>{const t=document.createElement('div');t.className='tick';t.style.left=(3+i/(N-1)*94)+'%';t.title=w.name;t.onclick=()=>jump(i);$('ticks').appendChild(t);return t;});
+const mini=$('mini'), mctx=mini.getContext('2d');
+
+/* minimap bounds */
+let bx0=Infinity,bx1=-Infinity,bz0=Infinity,bz1=-Infinity;
+WP.forEach(w=>{bx0=Math.min(bx0,w.pos[0]);bx1=Math.max(bx1,w.pos[0]);bz0=Math.min(bz0,w.pos[2]);bz1=Math.max(bz1,w.pos[2]);});
+const mpad=16, MW=mini.width, MH=mini.height;
+const rx=(bx1-bx0)||1, rz=(bz1-bz0)||1;
+const msc=Math.min((MW-2*mpad)/rx,(MH-2*mpad)/rz);   // preserve aspect so the route isn't stretched
+const moffx=(MW-rx*msc)/2, moffz=(MH-rz*msc)/2;
+function mmap(x,z){ return [moffx+(x-bx0)*msc, moffz+(z-bz0)*msc]; }
+
+/* ---------------- playback ---------------- */
+// phases: intro, then hold0, travel1, hold1, ... hold8, outro
+const PHASES=[{k:'intro'},{k:'hold',w:0}];
+for(let w=1;w<N;w++){PHASES.push({k:'travel',to:w});PHASES.push({k:'hold',w});}
+PHASES.push({k:'outro'});
+const holdIndexOf=w=>PHASES.findIndex(p=>p.k==='hold'&&p.w===w);
+const travelIndexTo=w=>PHASES.findIndex(p=>p.k==='travel'&&p.to===w);
+const NAV=PHASES.map((p,i)=>i).filter(i=>PHASES[i].k!=='travel'); // intro · 9 stops · outro summary
+
+const DUR={intro:3400,hold:3300,travel:2700,outro:4600};
+let phase=0, playing=false, speed=1, elapsed=0, tCur=0, activeW=0, last=performance.now(), started=false, userZoom=1, stopAtNextHold=false;
+const SPEEDS=[1,1.5,2,0.5];
+const easeIO=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+
+// camera pose state
+const camPos=new THREE.Vector3(0,64,66), camTgt=new THREE.Vector3(0,1,0);
+camera.position.copy(camPos); camera.lookAt(camTgt);
+const UP=new THREE.Vector3(0,1,0), _p=new THREE.Vector3(),_tan=new THREE.Vector3(),_right=new THREE.Vector3(),_dp=new THREE.Vector3(),_dt=new THREE.Vector3();
+
+function setupPhase(i){
+  phase=i; elapsed=0; const p=PHASES[i];
+  if(p.k==='hold' && stopAtNextHold){ stopAtNextHold=false; playing=false; }   // arrived after an animated Next → pause here
+  document.getElementById('summary').classList.toggle('show', p.k==='outro');
+  if(p.k==='intro'){activeW=0;tCur=0;applyRoute(null);showCard(null,'intro');}
+  else if(p.k==='outro'){activeW=N-1;tCur=1;playing=false;showCard(null,'outro');}   // stop on Journey Complete; wait for user
+  else if(p.k==='hold'){activeW=p.w;tCur=T[p.w];applyRoute(ROUTES[p.w]);showCard(p.w,'hold');}
+  else if(p.k==='travel'){activeW=p.to;tCur=T[p.to-1];applyRoute(ROUTES[p.to]);showCard(p.to,'travel');}
+  updateHUD();
+}
+function nextPhase(){ if(phase<PHASES.length-1) setupPhase(phase+1); else { playing=false; document.getElementById('btnPlay').textContent='⏵'; } }
+
+function showCard(w,mode){
+  const key = mode==='intro'?'intro':(mode==='outro'?'outro':('w'+w));
+  if(key===showCard._k) return;   // same content (travel→arrival): keep it steadily on screen
+  showCard._k=key;
+  const B=document.getElementById('banner');
+  let step,title,exp,party,tf,accent;
+  if(mode==='intro'){
+    step='OVERVIEW'; title=na(SUMMARY.title);
+    exp='Follow the payment from start to finish.'; party=PARTY[0]+' → '+PARTY[N-1]; tf=na(SUMMARY.timeframe); accent='#'+((CAT[WP[0].cat]&&CAT[WP[0].cat].c)||0x3aa0ff).toString(16).padStart(6,'0');
+  }else if(mode==='outro'){
+    const last=WP[N-1]; step='COMPLETE'; title='Delivered';
+    exp=na(SUMMARY.received)+' delivered.'; party=last.party; tf=na(SUMMARY.timeframe); accent='#'+((CAT[last.cat]&&CAT[last.cat].c)||0x34e07a).toString(16).padStart(6,'0');
+  }else{
+    const o=WP[w]; step='STEP '+(w+1)+' / '+N; title=o.stepTitle; exp=o.exp; party=o.party; tf=o.tf;
+    accent='#'+o.color.toString(16).padStart(6,'0');
+  }
+  $('bnStep').textContent=step; $('bnTitle').textContent=title; $('bnExp').textContent=exp;
+  $('bnPhase').textContent=(mode==='intro'||mode==='outro')?'Funds Flow':(WP[w].phase||'Funds Flow');
+  $('bnParty').textContent=party; $('bnTime').textContent=na(tf);
+  $('bnDot').style.background=accent; $('bnDot').style.color=accent; B.style.setProperty('--accent',accent);
+  const isIntro=mode==='intro';                          // overview shows the separate legend box instead of the cells
+  $('bnCells').style.display=isIntro?'none':'';
+  $('bnLegend').classList.remove('show');
+  $('legendBox').classList.toggle('show',isIntro);
+  B.classList.remove('chg'); void B.offsetWidth; B.classList.add('chg');
+  // dimmed preview of the next step
+  const NB=$('nextbar');
+  const ni = mode==='intro' ? 0 : (mode==='outro' ? null : w+1);
+  if(ni===null){ NB.classList.remove('show'); }
+  else if(ni<N){ $('nbStep').textContent='Step '+(ni+1); $('nbTitle').textContent=WP[ni].stepTitle; NB.classList.add('show'); }
+  else { $('nbStep').textContent='Recap'; $('nbTitle').textContent='Full funds flow'; NB.classList.add('show'); }
+}
+function updateHUD(){
+  const w=WP[activeW];
+  $('stElapsed').textContent=w.elapsed||(w.stamp?String(w.stamp).split('·')[0].trim():''); $('stElapsedSub').textContent=w.elsub||(w.stamp&&String(w.stamp).includes('·')?String(w.stamp).split('·')[1].trim():'');
+  $('stAmount').textContent=w.amount.replace('.00',''); $('stAmountSub').textContent=w.amsub;
+  const prog = activeW/(N-1);
+  $('tlfill').style.width=(3+prog*94)+'%';
+  ticks.forEach((t,k)=>{t.classList.toggle('done',k<=activeW);t.classList.toggle('cur',k===activeW);});
+  $('btnPlay').textContent=playing?'⏸':'⏵';
+}
+
+/* ---------------- per-frame ---------------- */
+// pull the camera back on narrow / portrait screens so the wide route still fits
+function camK(){ const a=camera.aspect; return a>=1.5?1:Math.min(2.7,1.5/a); }
+function updateCameraTargets(){
+  const p=PHASES[phase]; const k=camK();
+  if(p.k==='intro'||p.k==='outro'){
+    _dt.set(0,1,0);
+    _dp.set(0, 5+56*k, 66*k);
+  }else if(p.k==='hold'){
+    _p.copy(curve.getPoint(tCur)); _tan.copy(curve.getTangent(tCur)).normalize();
+    _right.crossVectors(_tan,UP).normalize();
+    const ang=performance.now()*0.0001;
+    _dp.copy(_p).addScaledVector(_tan,-15*k).addScaledVector(_right,(8+1.3*Math.cos(ang))*k).addScaledVector(UP,(11+0.7*Math.sin(ang))*k);
+    _dt.copy(_p).addScaledVector(UP,2.5);
+  }else{ // travel — chase cam, pulled back for context
+    _p.copy(curve.getPoint(tCur)); _tan.copy(curve.getTangent(tCur)).normalize();
+    _right.crossVectors(_tan,UP).normalize();
+    _dp.copy(_p).addScaledVector(_tan,-14*k).addScaledVector(UP,7*k).addScaledVector(_right,3.4*k);
+    _dt.copy(_p).addScaledVector(_tan,6).addScaledVector(UP,1.3);
+  }
+  if(_dp.y<1.5)_dp.y=1.5;
+}
+function frame(now){
+  let dt=now-last; last=now; if(dt>60)dt=60;
+  // advance phase clock
+  if(playing){
+    elapsed+=dt*speed;
+    const p=PHASES[phase], d=DUR[p.k];
+    if(p.k==='travel'){
+      const pr=Math.min(1,elapsed/d); tCur=T[p.to-1]+(T[p.to]-T[p.to-1])*easeIO(pr);
+      if(elapsed>=d){tCur=T[p.to];nextPhase();}
+    }else{ if(elapsed>=d) nextPhase(); }
+  }
+  // packet
+  curve.getPoint(tCur,_p); packet.position.copy(_p);
+  const pulse=1+0.06*Math.sin(now*0.006); core.scale.setScalar(pulse); ringP.rotation.z+=0.03; ringP.rotation.x+=0.012;
+  // trail
+  trailBuf.unshift(_p.x,_p.y,_p.z); if(trailBuf.length>TRAIL*3)trailBuf.length=TRAIL*3;
+  for(let i=0;i<TRAIL;i++){const idx=i*3; if(idx<trailBuf.length){trailPos[idx]=trailBuf[idx];trailPos[idx+1]=trailBuf[idx+1];trailPos[idx+2]=trailBuf[idx+2];}else{trailPos[idx]=_p.x;trailPos[idx+1]=_p.y;trailPos[idx+2]=_p.z;}}
+  trailGeo.attributes.position.needsUpdate=true;
+  // flow dots
+  const fp=now*0.00004;
+  flowMeshes.forEach((m,i)=>{let t=(flow[i]+fp)%1; curve.getPoint(t,m.position);});
+  // markers highlight
+  markers.forEach((mk,i)=>{
+    const on=(i===activeW), near=packet.position.distanceTo(mk.g.position)<8;
+    const by=mk.baseY+Math.sin(now*0.0018+mk.phase)*0.3;
+    mk.icon.position.y=by; mk.glow.position.y=by;
+    const isc=(on?3.2:near?2.95:2.8); mk.icon.scale.setScalar(mk.icon.scale.x+(isc-mk.icon.scale.x)*0.1);
+    const gT=(on?6.4:near?5.2:4.4)+(on?Math.sin(now*0.005)*0.4:0);
+    mk.glow.scale.setScalar(mk.glow.scale.x+(gT-mk.glow.scale.x)*0.1);
+    mk.glowMat.opacity+=((on?0.95:0.6)-mk.glowMat.opacity)*0.1;
+    mk.ring1Mat.opacity+=((on?1:0.5)-mk.ring1Mat.opacity)*0.1;
+    const r2=on?1+0.16*Math.sin(now*0.004):1; mk.ring2.scale.set(r2,r2,r2);
+    mk.ring2Mat.opacity+=((on?0.7:0.28)-mk.ring2Mat.opacity)*0.1;
+    mk.beamMat.opacity+=((on?0.24:0.1)-mk.beamMat.opacity)*0.08;
+    mk.poolMat.opacity+=((on?0.24:0.1)-mk.poolMat.opacity)*0.08;
+  });
+  // camera damp
+  updateCameraTargets();
+  _dp.sub(_dt).multiplyScalar(userZoom).add(_dt);       // user scroll/pinch zoom (dolly around the look target)
+  if(_dp.y<1.2)_dp.y=1.2;
+  const k=1-Math.exp(-dt/260);
+  camera.position.lerp(_dp,k); camTgt.lerp(_dt,k); camera.lookAt(camTgt);
+  // labels project
+  labels.forEach((el,i)=>{
+    const v=_p2.copy(markers[i].g.position); v.y+=5; v.project(camera);
+    if(v.z>1){el.style.opacity=0;return;}
+    const x=(v.x*.5+.5)*innerWidth, y=(-v.y*.5+.5)*innerHeight;
+    el.style.left=x+'px'; el.style.top=y+'px';
+    el.style.opacity = (i===activeW)?1:0.5; el.classList.toggle('active',i===activeW);
+  });
+  // rail-name label riding the active route segment
+  const _ph=PHASES[phase], rl=$('routeLabel');
+  if(_ph.k==='travel'){
+    const r=ROUTES[_ph.to]; curve.getPoint((T[_ph.to-1]+T[_ph.to])/2,_p2); _p2.y+=0.9; _p2.project(camera);  // sit on the rail (segment midpoint)
+    if(_p2.z<=1){
+      rl.style.left=((_p2.x*.5+.5)*innerWidth)+'px'; rl.style.top=((-_p2.y*.5+.5)*innerHeight)+'px';
+      rl.style.setProperty('--rc',(r&&r.type==='data')?'#8892a6':'#'+routeColor(r).toString(16).padStart(6,'0'));
+      const txt=routeLabel(r); if(rl.textContent!==txt)rl.textContent=txt;
+      rl.classList.add('show');
+    } else rl.classList.remove('show');
+  } else rl.classList.remove('show');
+  drawMini();
+  renderer.render(scene,camera);
+  requestAnimationFrame(frame);
+}
+const _p2=new THREE.Vector3();
+
+function drawMini(){
+  mctx.clearRect(0,0,MW,MH);
+  mctx.fillStyle='rgba(10,16,34,.5)'; mctx.fillRect(0,0,MW,MH);
+  // route
+  mctx.strokeStyle='rgba(120,150,220,.5)'; mctx.lineWidth=2; mctx.beginPath();
+  for(let s=0;s<=60;s++){const pt=curve.getPoint(s/60);const[mx,my]=mmap(pt.x,pt.z);s?mctx.lineTo(mx,my):mctx.moveTo(mx,my);}
+  mctx.stroke();
+  // waypoints
+  WP.forEach((w,i)=>{const[mx,my]=mmap(w.pos[0],w.pos[2]);mctx.beginPath();mctx.arc(mx,my,i===activeW?4.5:3,0,7);mctx.fillStyle='#'+w.color.toString(16).padStart(6,'0');mctx.globalAlpha=i<=activeW?1:0.5;mctx.fill();mctx.globalAlpha=1;});
+  // packet
+  const[px,py]=mmap(packet.position.x,packet.position.z);
+  mctx.beginPath();mctx.arc(px,py,4,0,7);mctx.fillStyle='#fff';mctx.fill();
+  mctx.beginPath();mctx.arc(px,py,7,0,7);mctx.strokeStyle='rgba(255,215,106,.8)';mctx.lineWidth=1.5;mctx.stroke();
+}
+
+/* ---------------- controls ---------------- */
+function jump(w){playing=false;setupPhase(holdIndexOf(w));$('btnPlay').textContent='⏵';}
+function curW(){const p=PHASES[phase];return p.k==='hold'?p.w:(p.k==='travel'?p.to:(p.k==='intro'?0:N-1));}
+$('btnPlay').onclick=()=>{playing=!playing;$('btnPlay').textContent=playing?'⏸':'⏵';};
+function navPos(){let t=phase;const p=PHASES[phase];if(p.k==='travel')t=holdIndexOf(p.to);const i=NAV.indexOf(t);return i<0?0:i;}
+$('btnNext').onclick=()=>{
+  const p=PHASES[phase];
+  if(p.k==='travel'){ playing=false; setupPhase(holdIndexOf(p.to)); return; }        // mid-route → skip to destination stop
+  const w = p.k==='hold'? p.w : (p.k==='intro'? -1 : N-1);
+  if(w<0){ playing=false; setupPhase(holdIndexOf(0)); return; }                       // overview → first stop
+  if(w>=N-1){ playing=false; setupPhase(PHASES.length-1); return; }                   // last stop → recap
+  const ti=travelIndexTo(w+1);                                                        // otherwise animate the move to the next stop
+  if(ti>=0){ stopAtNextHold=true; playing=true; setupPhase(ti); }
+  else { playing=false; setupPhase(holdIndexOf(w+1)); }
+};
+$('btnPrev').onclick=()=>{
+  const p=PHASES[phase]; playing=false; stopAtNextHold=false;
+  if(p.k==='travel'){ setupPhase(holdIndexOf(p.to-1)); return; }                      // mid-route → back to previous stop
+  const w = p.k==='hold'? p.w : (p.k==='intro'? 0 : N-1);
+  setupPhase(w<=0? 0 : holdIndexOf(w-1));                                             // previous stop (or overview)
+};
+$('btnRestart').onclick=()=>{playing=true;userZoom=1;showCard._k=null;setupPhase(0);$('btnPlay').textContent='⏸';};
+$('sumReplay').onclick=()=>{playing=true;userZoom=1;showCard._k=null;setupPhase(0);$('btnPlay').textContent='⏸';};
+$('sumClose').onclick=()=>{playing=false;userZoom=1;showCard._k=null;setupPhase(0);$('btnPlay').textContent='⏵';};  // back to overview, paused
+
+// build + download a PDF of the funds flow (client-side via jsPDF)
+// Build a wide SWIM-LANE flow-of-funds diagram PDF (lanes = party categories; funds=solid/currency-coloured, data=dashed)
+function downloadPDF(){
+  if(!(window.jspdf&&window.jspdf.jsPDF)){ alert('PDF generator didn’t load — check your connection and reload.'); return; }
+  const {jsPDF}=window.jspdf;
+  const rgb=n=>[(n>>16)&255,(n>>8)&255,n&255];
+  const Sx=s=>String(s).replace(/→/g,'->').replace(/≈/g,'~').replace(/[–—]/g,'-').replace(/[✉✓✗−]/g,'').replace(/·/g,'-').trim();
+  // lanes = the source swim lanes (categories present), in flow order
+  const ORDER=Object.keys(CAT);   // lanes fully data-driven: PDF lane order = CAT declaration order
+  const lanes=ORDER.filter(k=>WP.some(w=>w.cat===k));
+  const laneIx={}; lanes.forEach((k,i)=>laneIx[k]=i);
+  // geometry — a wide canvas sized to the flow, like the source diagram
+  const M=40, labelW=140, colW=134, laneH=112, Ty=120, hw=57, hh=31;
+  const pageW=M+labelW+WP.length*colW+M, pageH=Ty+lanes.length*laneH+52, W=pageW;
+  const doc=new jsPDF({unit:'pt',format:[pageW,pageH],orientation:'landscape'});
+  const contentX=M+labelW, cxOf=i=>contentX+(i+0.5)*colW, cyOf=i=>Ty+(laneIx[WP[i].cat]+0.5)*laneH;
+  // ---------- header ----------
+  doc.setFont('helvetica','bold'); doc.setFontSize(23); doc.setTextColor(18,18,30);
+  doc.text(Sx(na(SUMMARY.title)), M, 46);
+  doc.setFont('helvetica','normal'); doc.setFontSize(11.5); doc.setTextColor(122,122,142);
+  doc.text('Flow of Funds', M, 66);
+  doc.setFontSize(10.5); doc.setTextColor(72,74,94);
+  doc.text(`Sent  ${Sx(na(SUMMARY.sent))}   ->   Received  ${Sx(na(SUMMARY.received))}          Cost  ${Sx(na(SUMMARY.cost))}          ${Sx(na(SUMMARY.timeframe))}          ${na(SUMMARY.parties)} parties`, M, 90);
+  // ---------- legend (data-driven, right-aligned) ----------
+  const leg=[];
+  [...new Set(ROUTES.filter(r=>r&&r.type==='banking').map(r=>r.cur))].forEach(cu=>leg.push({c:rgb(CURCOLOR[cu]||0x34e07a),dash:false,t:cu+' funds'}));
+  [...new Set(ROUTES.filter(r=>r&&r.type==='blockchain').map(r=>r.chain))].forEach(ch=>leg.push({c:rgb(CHAINCOLOR[ch]||0x8247e5),dash:false,t:(ch||'Stablecoin')+' funds'}));
+  if(ROUTES.some(r=>r&&r.type==='data'))leg.push({c:[150,156,176],dash:true,t:'Data / message'});
+  doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  const gap=20, lineLen=26, pad=6, widths=leg.map(it=>lineLen+pad+doc.getTextWidth(it.t));
+  let lx=W-M-widths.reduce((a,b)=>a+b,0)-gap*Math.max(0,leg.length-1); const ly=54;
+  leg.forEach((it,i)=>{
+    doc.setDrawColor(it.c[0],it.c[1],it.c[2]); doc.setLineWidth(it.dash?1.5:2.2);
+    doc.setLineDashPattern(it.dash?[3,3]:[],0); doc.line(lx,ly,lx+lineLen,ly); doc.setLineDashPattern([],0);
+    doc.setFillColor(it.c[0],it.c[1],it.c[2]); doc.triangle(lx+lineLen,ly,lx+lineLen-6,ly-3.4,lx+lineLen-6,ly+3.4,'F');
+    doc.setTextColor(60,62,80); doc.text(it.t, lx+lineLen+pad, ly+3.1); lx+=widths[i]+gap;
+  });
+  // ---------- lane bands ----------
+  lanes.forEach((k,i)=>{
+    const yy=Ty+i*laneH, c=rgb(CAT[k].c);
+    doc.setFillColor(Math.round(c[0]*0.10+240),Math.round(c[1]*0.10+240),Math.round(c[2]*0.10+240)); doc.rect(M,yy,W-2*M,laneH,'F');
+    doc.setFillColor(c[0],c[1],c[2]); doc.rect(M,yy,5,laneH,'F');
+    doc.setTextColor(c[0]*0.62|0,c[1]*0.62|0,c[2]*0.62|0); doc.setFont('helvetica','bold'); doc.setFontSize(12.5);
+    doc.text(Sx(CAT[k].label), M+16, yy+laneH/2+4);
+    doc.setDrawColor(228,230,238); doc.setLineWidth(0.6); doc.line(M,yy,W-M,yy);
+  });
+  const laneBottom=Ty+lanes.length*laneH;
+  doc.setDrawColor(228,230,238); doc.line(M,laneBottom,W-M,laneBottom);
+  doc.setDrawColor(214,217,227); doc.setLineWidth(0.9); doc.line(contentX,Ty,contentX,laneBottom);
+  // ---------- arrows (behind boxes) ----------
+  const edge=(cx,cy,tx,ty)=>{const dx=tx-cx,dy=ty-cy,sx=dx?Math.abs(hw/dx):1e9,sy=dy?Math.abs(hh/dy):1e9,t=Math.min(sx,sy);return [cx+dx*t,cy+dy*t];};
+  for(let i=0;i<WP.length-1;i++){
+    const r=ROUTES[i+1], isData=!r||r.type==='data';
+    const a=[cxOf(i),cyOf(i)], b=[cxOf(i+1),cyOf(i+1)], p=edge(a[0],a[1],b[0],b[1]), q=edge(b[0],b[1],a[0],a[1]);
+    const rc=isData?[150,156,176]:rgb(routeColor(r));
+    doc.setDrawColor(rc[0],rc[1],rc[2]); doc.setLineWidth(isData?1.5:2.2);
+    doc.setLineDashPattern(isData?[3,3]:[],0); doc.line(p[0],p[1],q[0],q[1]); doc.setLineDashPattern([],0);
+    const ang=Math.atan2(q[1]-p[1],q[0]-p[0]), ah=8;
+    doc.setFillColor(rc[0],rc[1],rc[2]);
+    doc.triangle(q[0],q[1], q[0]-ah*Math.cos(ang-0.4),q[1]-ah*Math.sin(ang-0.4), q[0]-ah*Math.cos(ang+0.4),q[1]-ah*Math.sin(ang+0.4),'F');
+    let lab=routeLabel(r); if(r&&r.type==='banking'&&CURSYM[r.cur])lab+=' '+CURSYM[r.cur];
+    if(lab){ const mx=(p[0]+q[0])/2, my=(p[1]+q[1])/2; doc.setFont('helvetica','bold'); doc.setFontSize(8.4);
+      const tw=doc.getTextWidth(lab)+10; doc.setFillColor(255,255,255); doc.setDrawColor(232,234,240); doc.setLineWidth(0.5);
+      doc.roundedRect(mx-tw/2,my-8.5,tw,14,3,3,'FD'); doc.setTextColor(rc[0],rc[1],rc[2]); doc.text(lab,mx,my+1.6,{align:'center'}); }
+  }
+  // ---------- boxes ----------
+  for(let i=0;i<WP.length;i++){
+    const w=WP[i], cx=cxOf(i), cy=cyOf(i), c=rgb(w.color);
+    doc.setFillColor(255,255,255); doc.setDrawColor(c[0],c[1],c[2]); doc.setLineWidth(1.8); doc.roundedRect(cx-hw,cy-hh,hw*2,hh*2,8,8,'FD');
+    doc.setFillColor(c[0],c[1],c[2]); doc.roundedRect(cx-hw,cy-hh,5,hh*2,2,2,'F');
+    doc.setFillColor(c[0],c[1],c[2]); doc.circle(cx-hw+17,cy-hh+14,8,'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.text(String(i+1),cx-hw+17,cy-hh+17,{align:'center'});
+    doc.setTextColor(22,22,34); doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    doc.text(doc.splitTextToSize(Sx(w.legLabel),hw*2-26), cx+3, cy-9, {align:'center'});
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(60,62,82); doc.text(Sx(w.amount), cx+3, cy+13, {align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(140,142,160); doc.text(Sx(w.amsub), cx+3, cy+23, {align:'center'});
+  }
+  // ---------- footer ----------
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(150,150,164);
+  doc.text('Acquiring side runs the same flow in reverse.  Generated from the interactive funds-flow view.', M, pageH-18);
+  doc.save(Sx(na(SUMMARY.title)).replace(/[^\w]+/g,'_').replace(/^_|_$/g,'')+'_funds_flow.pdf');
+}
+$('sumDownload').onclick=downloadPDF;
+const speedMenu=$('speedMenu');
+function setSpeed(v){ speed=v; $('btnSpeed').textContent=v+'×'; [...speedMenu.children].forEach(b=>b.classList.toggle('active',parseFloat(b.dataset.s)===v)); }
+$('btnSpeed').onclick=e=>{ e.stopPropagation(); speedMenu.classList.toggle('open'); };
+[...speedMenu.children].forEach(b=>{ b.onclick=e=>{ e.stopPropagation(); setSpeed(parseFloat(b.dataset.s)); speedMenu.classList.remove('open'); }; });
+setSpeed(1);
+function startJourney(){
+  if(started)return; started=true;
+  $('intro').classList.add('hidden');
+  playing=true; showCard._k=null; setupPhase(0); $('btnPlay').textContent='⏸';
+}
+$('startBtn').onclick=startJourney;
+addEventListener('keydown',e=>{
+  if(!started){ if(e.code==='Space'||e.code==='Enter'){e.preventDefault();startJourney();} return; }
+  if(e.code==='Space'){e.preventDefault();$('btnPlay').click();}
+  else if(e.code==='ArrowRight')$('btnNext').click();
+  else if(e.code==='ArrowLeft')$('btnPrev').click();
+  else if(e.key==='r'||e.key==='R')$('btnRestart').click();
+});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+// click / tap any stop (icon or its colored zone) to jump straight there
+const _c=new THREE.Vector3();
+function pickNode(cx,cy){                              // nearest stop icon to the click, using each icon's exact rendered position
+  const r=renderer.domElement.getBoundingClientRect();
+  const px=cx-r.left, py=cy-r.top;
+  let best=-1,bd=1e9;
+  for(let i=0;i<markers.length;i++){
+    markers[i].icon.getWorldPosition(_c);               // exact on-screen icon center (matches what you see)
+    _c.project(camera);
+    if(_c.z>1) continue;                                // behind camera
+    const sx=(_c.x*.5+.5)*r.width, sy=(-_c.y*.5+.5)*r.height;
+    const d=Math.hypot(sx-px,sy-py);
+    if(d<=72 && d<bd){ bd=d; best=i; }                  // within 72px of an icon; nearest wins
+  }
+  return best;
+}
+function overHUD(t){ return !!(t&&t.closest&&t.closest('.controls,.bannerwrap,.sum-card,.intro,.map,.timeline,.stats,.hint,.legendbox')); }
+addEventListener('click',e=>{
+  if(speedMenu.classList.contains('open')){ speedMenu.classList.remove('open'); return; }  // outside click closes speed menu
+  if(!started||overHUD(e.target)) return;
+  const wi=pickNode(e.clientX,e.clientY);
+  if(wi>=0) jump(wi);                 // clicked a stop icon → go there
+  else $('btnNext').click();          // clicked empty scene → advance to next step
+});
+renderer.domElement.addEventListener('pointermove',e=>{ if(!started){renderer.domElement.style.cursor='';return;} renderer.domElement.style.cursor=pickNode(e.clientX,e.clientY)>=0?'pointer':''; });
+// scroll / pinch to zoom (active on overview + flow; NOT on the Journey Complete recap)
+function zoomAllowed(){ return started && PHASES[phase].k!=='outro'; }
+const clampZoom=v=>Math.min(2.6,Math.max(0.4,v));
+addEventListener('wheel',e=>{ if(!zoomAllowed())return; e.preventDefault(); userZoom=clampZoom(userZoom*Math.exp(e.deltaY*0.0015)); },{passive:false});
+let _pinch=0;
+renderer.domElement.addEventListener('touchstart',e=>{ if(e.touches.length===2) _pinch=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); },{passive:false});
+renderer.domElement.addEventListener('touchmove',e=>{ if(e.touches.length!==2||!zoomAllowed())return; e.preventDefault(); const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); if(_pinch>0&&d>0) userZoom=clampZoom(userZoom*(_pinch/d)); _pinch=d; },{passive:false});
+renderer.domElement.addEventListener('touchend',e=>{ if(e.touches.length<2) _pinch=0; });
+
+// route map (bottom-right): click a point to jump to the nearest stop
+mini.style.cursor='pointer';
+mini.addEventListener('click',e=>{
+  if(!started) return; e.stopPropagation();
+  const r=mini.getBoundingClientRect();
+  const mx=(e.clientX-r.left)*(mini.width/r.width), my=(e.clientY-r.top)*(mini.height/r.height);
+  let best=-1,bd=1e9;
+  WP.forEach((w,i)=>{const p=mmap(w.pos[0],w.pos[2]);const d=Math.hypot(p[0]-mx,p[1]-my);if(d<bd){bd=d;best=i;}});
+  if(best>=0) jump(best);
+});
+// recap step rows: click to jump
+document.getElementById('sumList').addEventListener('click',e=>{
+  const row=e.target.closest('.srow'); if(row&&row.dataset.wi!=null) jump(+row.dataset.wi);
+});
+
+/* ---------------- end-of-journey recap ---------------- */
+// header totals for the recap — leave a field '' or null and it renders as N/A
+// [DATA] SUMMARY = recap header: title, sent, received, cost, timeframe, parties.
+const SUMMARY={
+  title:'Instinct Agent Wallets — Hold and Spend on Polygon',
+  sent:'$2,000 funded',
+  received:'640 USDC to merchant · 320 USDC reimbursed',
+  cost:'< $0.01 network fees',
+  timeframe:'Seconds per transfer',
+  parties:4
+};
+function na(v){ return (v===null||v===undefined||v==='') ? 'N/A' : v; }
+// [DATA] ^ SUMMARY is the final flow-data constant; everything else is machinery.
+// derive user-visible copy from the data so a pure [DATA] fill renders correctly (no string edits needed)
+(function initCopy(){try{
+  document.title=na(SUMMARY.title);
+  var it=document.getElementById('introTitle'); if(it)it.textContent=na(SUMMARY.title);
+  var tl=document.getElementById('tllabels');
+  if(tl){var idx=[0,Math.floor((N-1)/2),N-1],seen={},u=idx.filter(function(i){if(seen[i])return false;seen[i]=1;return true;});
+    tl.innerHTML=u.map(function(i){return '<span>'+(WP[i].stamp||WP[i].elapsed||'')+'</span>';}).join('');}
+}catch(e){}})();
+function buildSummary(){
+  document.getElementById('sumTitle').textContent=na(SUMMARY.title);
+  document.getElementById('sumStats').innerHTML=
+    `<div class="sum-flow">`+
+      `<div class="fl"><b>Amount Sent</b><span>${na(SUMMARY.sent)}</span></div>`+
+      `<div class="fl-arrow">&#8594;</div>`+
+      `<div class="fl"><b>Amount Received</b><span class="recv">${na(SUMMARY.received)}</span></div>`+
+    `</div>`+
+    `<div class="sum-mini">`+
+      `<div class="st cost"><b>Total Cost</b><span>${na(SUMMARY.cost)}</span></div>`+
+      `<div class="st"><b>Timeframe</b><span>${na(SUMMARY.timeframe)}</span></div>`+
+      `<div class="st"><b>Parties Involved</b><span>${na(SUMMARY.parties)}</span></div>`+
+    `</div>`;
+  document.getElementById('sumList').innerHTML=
+    WP.map((w,i)=>{
+      const col='#'+w.color.toString(16).padStart(6,'0');
+      return `<div class="srow" data-wi="${i}"><span class="snum" style="background:${col}">${i+1}</span>`+
+        `<div class="smain"><div class="sh"><b>${w.stepTitle}</b><span class="sparty">${w.party}</span></div><div class="sexp">${w.exp}</div>${w.desc&&w.desc!==w.exp?`<div class="sdesc">${w.desc}</div>`:''}</div>`+
+        `<div class="scol stime">${na(w.tf)}</div>`+
+        `<div class="scol secon"><div class="samt">${w.amount}</div>${w.event?`<div class="sevent">${w.event}</div>`:''}</div></div>`;
+    }).join('');
+}
+
+/* ---------------- go ---------------- */
+if(!hasStepTF) $('bnTimeCell').style.display='none';   // no step has a timeframe → drop the box entirely
+$('lbParties').innerHTML=Object.keys(CAT).map(k=>{const c='#'+CAT[k].c.toString(16).padStart(6,'0');const first=WP.find(w=>w.cat===k);const ic=first?ICONS[first.icon]:'';return `<div class="lb-item"><span class="lb-chip" style="background:${c}">${ic?`<img src="data:image/svg+xml,${encodeURIComponent(ic)}">`:''}</span>${CAT[k].label}</div>`;}).join('');
+$('lbRoutes').innerHTML=[['#34e07a','$','Banking rails — fiat ($ / € …)'],['#8247e5','⬢','Blockchain rails — stablecoin'],['#3a3f4c','●','Data transfer — messaging']].map(([c,s,n])=>`<div class="lb-item"><span class="lb-chip rt" style="background:${c}">${s}</span>${n}</div>`).join('');
+buildSummary();
+setupPhase(0);
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
